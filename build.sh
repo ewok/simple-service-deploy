@@ -132,21 +132,9 @@ update-rc.d ${NAME} defaults || exit 0
 service ${NAME} start
 EOF
 
-cat <<EOF > afterinstallrpm
-#!/bin/bash
-chkconfig ${NAME} on
-service ${NAME} start
-EOF
-
 cat <<EOF > beforeremovedeb
 #!/bin/bash
 update-rc.d -f ${NAME} remove || exit 0
-service ${NAME} stop
-EOF
-
-cat <<EOF > beforeremoverpm
-#!/bin/bash
-chkconfig ${NAME} off
 service ${NAME} stop
 EOF
 
@@ -162,8 +150,6 @@ fpm -n $NAME -v $VERSION -a all -C ${PACKAGE_DIR} \
 
 fpm -n $NAME -v $VERSION -a all -C ${PACKAGE_DIR} \
         --description "$DESCRIPTION" \
-	--before-remove beforeremoverpm \
-	--after-install afterinstallrpm \
         -t "rpm" -d "java-1.7.0-openjdk" \
         -s dir etc usr
 
