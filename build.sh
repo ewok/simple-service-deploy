@@ -72,7 +72,7 @@ do_start()
 {
  	echo "Starting $SERVICE_NAME ..."
         if [ ! -f $PIDFILE ]; then
-            nohup java -jar $PATH_TO_JAR /tmp 2>> /dev/null >> /dev/null &
+            nohup java -Dlogging.path=/var/log -jar $PATH_TO_JAR /tmp 2>> /dev/null >> /dev/null &
                         echo $! > $PIDFILE
             echo "$SERVICE_NAME started ..."
         else
@@ -126,18 +126,47 @@ EOF
 
 chmod +x ${PACKAGE_DIR}/etc/init.d/${NAME}
 
-function build() {
-    fpm -n $NAME -v $VERSION -a all -C ${PACKAGE_DIR} \
-        --description "$DESCRIPTION" \
-        -t "$1" -d "$2" \
-        -s dir etc usr
-}
+cat <<EOF > afterinstalldeb
+#!/bin/bash
+update-rc.d ${NAME} defaults || exit 0
+service ${NAME} start
+EOF
+
+cat <<EOF > afterinstallrpm
+#!/bin/bash
+chkconfig ${NAME} on
+service ${NAME} start
+EOF
+
+cat <<EOF > beforeremovedeb
+#!/bin/bash
+update-rc.d -f ${NAME} remove || exit 0
+service ${NAME} stop
+EOF
+
+cat <<EOF > beforeremoverpm
+#!/bin/bash
+chkconfig ${NAME} off
+service ${NAME} stop
+EOF
 
 rm -f *.deb
 rm -f *.rpm
 
-build "deb" "default-jre"
-build "rpm" "java-1.7.0-openjdk"
+fpm -n $NAME -v $VERSION -a all -C ${PACKAGE_DIR} \
+        --description "$DESCRIPTION" \
+	--before-remove beforeremovedeb \
+	--after-install afterinstalldeb \
+        -t "deb" -d "default-jre" \
+        -s dir etc usr
+
+fpm -n $NAME -v $VERSION -a all -C ${PACKAGE_DIR} \
+        --description "$DESCRIPTION" \
+	--before-remove beforeremoverpm \
+	--after-install afterinstallrpm \
+        -t "rpm" -d "java-1.7.0-openjdk" \
+        -s dir etc usr
+
 
 for i in $(ls *.deb); do
 	cp -f $i ${NGINX_DIR}/package.deb
