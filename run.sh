@@ -9,7 +9,6 @@ shut_down(){
 # stop service and clean up here
 
 service nginx stop
-killall webhookd
 
 }
 
@@ -17,7 +16,7 @@ cp -f install.sh /usr/share/nginx/html/index.html
 sed "/# URL/ a URL=\"${URL}\"" -i /usr/share/nginx/html/index.html
 
 service nginx start
-webhookd > /dev/null 2>&1 &
+python3 /build/simple-webserver.py 8889 > /dev/null 2>&1 &
 
 echo "[hit enter key to exit] or run 'docker stop <container>'"
 read _
